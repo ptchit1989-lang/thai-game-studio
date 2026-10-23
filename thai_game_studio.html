@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Thai Game Studio 0.1</title>
+<style>
+:root{--bg:#101722;--panel:#182333;--line:#2b3c50;--accent:#6be0b2;--text:#eef5fb;--muted:#a8b8c8}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans Thai",sans-serif}
+header{padding:12px 14px;background:#121c29;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+h1{font-size:18px;margin:0} .sub{font-size:11px;color:var(--muted)}
+button,select,input{font:inherit} button{border:1px solid var(--line);border-radius:10px;background:#223248;color:var(--text);padding:9px 11px;cursor:pointer}
+button.primary{background:var(--accent);color:#092319;border-color:transparent;font-weight:700}
+main{display:grid;grid-template-columns:1fr;gap:10px;padding:10px;max-width:1100px;margin:auto}
+#viewport{position:relative;height:47vh;min-height:290px;max-height:520px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#8ec7e6}
+#game{width:100%;height:100%;display:block;touch-action:none}
+.hud{position:absolute;left:10px;top:10px;background:#101722d9;border:1px solid #ffffff25;border-radius:10px;padding:8px 10px;font-size:12px;line-height:1.65}
+#toast{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:#101722e8;padding:7px 12px;border-radius:9px;font-size:12px;display:none;white-space:nowrap}
+#controls{position:absolute;inset:auto 0 12px 0;display:flex;justify-content:space-between;align-items:end;padding:0 12px;pointer-events:none}
+.pad{display:grid;grid-template-columns:42px 42px 42px;grid-template-rows:42px 42px 42px;gap:4px;pointer-events:auto}
+.pad button,.actions button{background:#101722bb;border:1px solid #ffffff55;padding:0;font-size:18px;touch-action:none}
+.pad .up{grid-column:2}.pad .left{grid-column:1;grid-row:2}.pad .down{grid-column:2;grid-row:2}.pad .right{grid-column:3;grid-row:2}
+.actions{display:flex;flex-direction:column;gap:7px;pointer-events:auto}.actions button{width:64px;height:48px;font-size:12px}
+.panels{display:grid;grid-template-columns:1fr;gap:10px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.panel h2{font-size:15px;margin:0 0 10px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:1}
+label{display:block;color:var(--muted);font-size:12px;margin:8px 0 4px}select,input{width:100%;padding:9px;background:#101722;color:var(--text);border:1px solid var(--line);border-radius:9px}
+.stat{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:7px 0;font-size:13px}
+#log{font-size:12px;color:var(--muted);line-height:1.7;max-height:100px;overflow:auto}
+.note{font-size:12px;color:var(--muted);line-height:1.6}
+@media(min-width:800px){main{grid-template-columns:minmax(0,1.65fr) minmax(270px,1fr);align-items:start}#viewport{height:66vh;grid-row:span 2}.panels{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<header><div><h1>🎮 Thai Game Studio</h1><div class="sub">รุ่นต้นแบบ 0.1 • เครื่องมือสร้างเกม RPG 3D</div></div><button id="reset">เริ่มใหม่</button></header>
+<main>
+<section id="viewport">
+<canvas id="game"></canvas>
+<div class="hud">❤️ เลือด: <b id="hp">100</b> / 100<br>⭐ เลเวล: <b id="level">1</b> • EXP: <b id="exp">0</b><br>🪙 เหรียญ: <b id="gold">0</b><br>📍 <span id="zone">ป่ามรกต</span></div>
+<div id="toast"></div>
+<div id="controls">
+ <div class="pad">
+  <button class="up" data-move="forward">▲</button><button class="left" data-move="left">◀</button><button class="down" data-move="back">▼</button><button class="right" data-move="right">▶</button>
+ </div>
+ <div class="actions"><button id="attack">⚔️ โจมตี</button><button id="collect">✦ เก็บของ</button></div>
+</div>
+</section>
+<section class="panels">
+<div class="panel">
+<h2>🧰 เครื่องมือสร้างโลก</h2>
+<label>เลือกแผนที่</label><select id="map"><option value="forest">ป่ามรกต</option><option value="lava">หุบเขาลาวา</option><option value="ice">ดินแดนน้ำแข็ง</option></select>
+<label>เพิ่มวัตถุในฉาก</label><div class="row"><button data-object="tree">🌲 ต้นไม้</button><button data-object="rock">🪨 หิน</button><button data-object="monster">👾 มอนสเตอร์</button></div>
+<label>ขนาดโลก</label><div class="row"><select id="worldSize"><option value="small">เล็ก</option><option value="medium" selected>กลาง</option><option value="large">ใหญ่</option></select><button class="primary" id="regenerate">สร้างโลก</button></div>
+<div class="note">วัตถุที่เพิ่มจะปรากฏในโลกปัจจุบัน การสร้างโลกใหม่จะสุ่มตำแหน่งวัตถุตกแต่งใหม่</div>
+</div>
+<div class="panel">
+<h2>📊 สถานะตัวละคร</h2>
+<div class="stat"><span>พลังโจมตี</span><b id="atk">10</b></div>
+<div class="stat"><span>มอนสเตอร์ในฉาก</span><b id="enemyCount">0</b></div>
+<div class="stat"><span>วัตถุที่วางเพิ่ม</span><b id="objectCount">0</b></div>
+<div class="row" style="margin-top:10px"><button id="heal">💚 ฟื้นฟูเลือด</button><button id="save">💾 บันทึกฉาก</button></div>
+<div class="row" style="margin-top:8px"><button id="export">⬇️ ส่งออกข้อมูลเกม</button></div>
+</div>
+<div class="panel"><h2>📜 บันทึกเหตุการณ์</h2><div id="log">ยินดีต้อนรับสู่ป่ามรกต! ใช้ปุ่มลูกศรเพื่อเดินสำรวจ</div></div>
+</section>
+</main>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+const canvas=document.querySelector('#game');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.shadowMap.enabled=true;
+const scene=new THREE.Scene(); scene.background=new THREE.Color('#8ec7e6'); scene.fog=new THREE.Fog('#8ec7e6',24,70);
+const camera=new THREE.PerspectiveCamera(60,1,.1,200);
+scene.add(new THREE.HemisphereLight(0xffffff,0x526044,2.1));
+const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(12,22,8);sun.castShadow=true;scene.add(sun);
+const world=new THREE.Group();scene.add(world);
+const player=new THREE.Group();scene.add(player);
+const mat=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness});
+const mats={grass:mat('#4f9b53'),trunk:mat('#755034'),leaf:mat('#267b48'),rock:mat('#737d86'),skin:mat('#f0bd8c'),armor:mat('#376bc1'),dark:mat('#27364c'),eye:mat('#171b23'),enemy:mat('#a43e58'),gold:mat('#ffcf4a'),lava:mat('#bd4c27'),ice:mat('#8bd8ee')};
+function mesh(geo,material,x,y,z,parent=world){const o=new THREE.Mesh(geo,material);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
+let objects=[],enemies=[],pickups=[],mapType='forest',worldRadius=22,playerHP=100,level=1,exp=0,gold=0,attackPower=10,playerSpeed=6;
+function makePlayer(){player.clear();mesh(new THREE.CapsuleGeometry(.42,.7,4,8),mats.armor,0,.8,0,player);mesh(new THREE.SphereGeometry(.31,12,10),mats.skin,0,1.52,0,player);mesh(new THREE.BoxGeometry(.1,.1,.06),mats.eye,-.11,1.55,-.27,player);mesh(new THREE.BoxGeometry(.1,.1,.06),mats.eye,.11,1.55,-.27,player);const sword=mesh(new THREE.BoxGeometry(.12,.65,.12),mat('#dce6f0'),.48,.88,-.05,player);sword.rotation.z=-.25;}
+function clearWorld(){world.clear();objects=[];enemies=[];pickups=[];}
+function randomPos(){const a=Math.random()*Math.PI*2,r=5+Math.random()*(worldRadius-5);return [Math.cos(a)*r,Math.sin(a)*r]}
+function addTree(x,z){const g=new THREE.Group();g.position.set(x,0,z);world.add(g);mesh(new THREE.CylinderGeometry(.18,.28,1.4,7),mats.trunk,0,.7,0,g);mesh(new THREE.ConeGeometry(.9,1.7,7),mats.leaf,0,1.8,0,g);mesh(new THREE.ConeGeometry(.65,1.35,7),mats.leaf,0,2.5,0,g);objects.push({type:'tree',x,z});}
+function addRock(x,z){mesh(new THREE.DodecahedronGeometry(.5+Math.random()*.4,0),mats.rock,x,.35,z);objects.push({type:'rock',x,z});}
+function addEnemy(x,z){const g=new THREE.Group();g.position.set(x,0,z);world.add(g);const body=mesh(new THREE.SphereGeometry(.55,12,10),mats.enemy,0,.62,0,g);mesh(new THREE.SphereGeometry(.18,10,8),mats.gold,-.22,1.08,-.18,g);mesh(new THREE.SphereGeometry(.18,10,8),mats.gold,.22,1.08,-.18,g);enemies.push({group:g,hp:30,maxHp:30,x,z,alive:true});objects.push({type:'monster',x,z});}
+function addPickup(x,z){mesh(new THREE.OctahedronGeometry(.28),mats.gold,x,.55,z);pickups.push({x,z,got:false});}
+function buildWorld(){
+ clearWorld();worldRadius=document.querySelector('#worldSize').value==='small'?14:document.querySelector('#worldSize').value==='large'?36:23;
+ const groundColor=mapType==='lava'?'#9a4b34':mapType==='ice'?'#b9e5f2':'#4f9b53';
+ scene.background.set(mapType==='lava'?'#d88a63':mapType==='ice'?'#b9dff2':'#8ec7e6');scene.fog.color.set(mapType==='lava'?'#d88a63':mapType==='ice'?'#b9dff2':'#8ec7e6');
+ const ground=mesh(new THREE.PlaneGeometry(worldRadius*2+12,worldRadius*2+12),mat(groundColor),0,-.12,0);ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;
+ // simple circular world boundary and landmarks
+ const ring=mesh(new THREE.TorusGeometry(worldRadius,.18,6,100),mat(mapType==='lava'?'#e87838':mapType==='ice'?'#e9ffff':'#b4d46b'),0,.03,0);ring.rotation.x=Math.PI/2;
+ for(let i=0;i<Math.floor(worldRadius*2);i++){let [x,z]=randomPos();if(Math.hypot(x,z)<4)continue;
+  if(mapType==='forest'){if(Math.random()<.78)addTree(x,z);else addRock(x,z)}
+  else if(mapType==='lava'){if(Math.random()<.55)addRock(x,z);else {const l=mesh(new THREE.ConeGeometry(.7,1.6,5),mats.lava,x,.7,z);objects.push({type:'lavaRock',x,z})}}
+  else {if(Math.random()<.65)addRock(x,z);else addTree(x,z)}
+ }
+ for(let i=0;i<5;i++){let [x,z]=randomPos();addEnemy(x,z)}
+ for(let i=0;i<7;i++){let [x,z]=randomPos();addPickup(x,z)}
+ player.position.set(0,0,0);makePlayer();updateUI();log('สร้างแผนที่'+mapName()+'สำเร็จ! สำรวจพื้นที่และต่อสู้กับมอนสเตอร์ได้เลย');
+}
+function mapName(){return mapType==='forest'?'ป่ามรกต':mapType==='lava'?'หุบเขาลาวา':'ดินแดนน้ำแข็ง'}
+function log(t){const el=document.querySelector('#log');el.innerHTML=t+'<br>'+el.innerHTML;el.innerHTML=el.innerHTML.split('<br>').slice(0,7).join('<br>')}
+let toastTimer;function toast(t){const el=document.querySelector('#toast');el.textContent=t;el.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.style.display='none',1700)}
+function updateUI(){document.querySelector('#hp').textContent=playerHP;document.querySelector('#level').textContent=level;document.querySelector('#exp').textContent=exp;document.querySelector('#gold').textContent=gold;document.querySelector('#atk').textContent=attackPower;document.querySelector('#zone').textContent=mapName();document.querySelector('#enemyCount').textContent=enemies.filter(e=>e.alive).length;document.querySelector('#objectCount').textContent=objects.length}
+const held={};document.querySelectorAll('[data-move]').forEach(b=>{const k=b.dataset.move;b.addEventListener('pointerdown',e=>{e.preventDefault();held[k]=true;b.setPointerCapture(e.pointerId)});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>held[k]=false))});
+window.addEventListener('keydown',e=>{if(['ArrowUp','w','W'].includes(e.key))held.forward=true;if(['ArrowDown','s','S'].includes(e.key))held.back=true;if(['ArrowLeft','a','A'].includes(e.key))held.left=true;if(['ArrowRight','d','D'].includes(e.key))held.right=true});
+window.addEventListener('keyup',e=>{if(['ArrowUp','w','W'].includes(e.key))held.forward=false;if(['ArrowDown','s','S'].includes(e.key))held.back=false;if(['ArrowLeft','a','A'].includes(e.key))held.left=false;if(['ArrowRight','d','D'].includes(e.key))held.right=false});
+document.querySelector('#attack').onclick=()=>{let target=null,dist=3.2;for(const e of enemies){if(!e.alive)continue;const d=Math.hypot(e.group.position.x-player.position.x,e.group.position.z-player.position.z);if(d<dist){dist=d;target=e}}
+ if(!target){toast('เข้าใกล้มอนสเตอร์ก่อน!');return}target.hp-=attackPower;toast('โจมตีโดน! -'+attackPower+' HP');if(target.hp<=0){target.alive=false;world.remove(target.group);exp+=15;gold+=3;if(exp>=level*30){exp=0;level++;attackPower+=3;playerHP=Math.min(100,playerHP+20);toast('เลเวลอัป! เลเวล '+level)}log('กำจัดมอนสเตอร์สำเร็จ ได้ 15 EXP และ 3 เหรียญ')}updateUI()};
+document.querySelector('#collect').onclick=()=>{let gotAny=false;for(const p of pickups){if(p.got)continue;if(Math.hypot(p.x-player.position.x,p.z-player.position.z)<2.2){p.got=true;gold+=1;gotAny=true;world.children.filter(o=>o.isMesh&&Math.abs(o.position.x-p.x)<.01&&Math.abs(o.position.z-p.z)<.01).forEach(o=>world.remove(o))}}toast(gotAny?'เก็บเหรียญแล้ว!':'ไม่มีไอเทมใกล้ตัว');updateUI()};
+document.querySelector('#heal').onclick=()=>{if(gold<2){toast('ต้องใช้ 2 เหรียญเพื่อฟื้นฟู');return}gold-=2;playerHP=Math.min(100,playerHP+30);updateUI();log('ใช้ 2 เหรียญ ฟื้นฟูเลือด 30 แต้ม')};
+document.querySelector('#map').onchange=e=>{mapType=e.target.value;buildWorld()};
+document.querySelector('#regenerate').onclick=buildWorld;
+document.querySelectorAll('[data-object]').forEach(b=>b.onclick=()=>{const [x,z]=randomPos();if(b.dataset.object==='tree')addTree(x,z);if(b.dataset.object==='rock')addRock(x,z);if(b.dataset.object==='monster')addEnemy(x,z);updateUI();toast('เพิ่มวัตถุในฉากแล้ว');});
+document.querySelector('#reset').onclick=()=>{playerHP=100;level=1;exp=0;gold=0;attackPower=10;mapType='forest';document.querySelector('#map').value='forest';buildWorld()};
+document.querySelector('#save').onclick=()=>{const data={version:'0.1',map:mapType,worldRadius,player:{x:player.position.x,z:player.position.z,hp:playerHP,level,exp,gold,attackPower},objects};localStorage.setItem('thaiGameStudioSave',JSON.stringify(data));toast('บันทึกฉากไว้ในเบราว์เซอร์แล้ว')};
+document.querySelector('#export').onclick=()=>{const data={version:'0.1',map:mapType,worldRadius,player:{x:player.position.x,z:player.position.z,hp:playerHP,level,exp,gold,attackPower},objects};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='thai-game-studio-scene.json';a.click();URL.revokeObjectURL(url);toast('ส่งออกข้อมูลฉากแล้ว')};
+function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(canvas);
+const clock=new THREE.Clock();
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);let dx=0,dz=0;if(held.forward)dz-=1;if(held.back)dz+=1;if(held.left)dx-=1;if(held.right)dx+=1;
+ if(dx||dz){const len=Math.hypot(dx,dz);dx/=len;dz/=len;player.position.x+=dx*playerSpeed*dt;player.position.z+=dz*playerSpeed*dt;player.rotation.y=Math.atan2(dx,dz);player.position.x=THREE.MathUtils.clamp(player.position.x,-worldRadius,worldRadius);player.position.z=THREE.MathUtils.clamp(player.position.z,-worldRadius,worldRadius)}
+ // enemies slowly approach player
+ for(const e of enemies){if(!e.alive)continue;const ex=player.position.x-e.group.position.x,ez=player.position.z-e.group.position.z,d=Math.hypot(ex,ez);if(d>1.35&&d<12){e.group.position.x+=ex/d*dt*.7;e.group.position.z+=ez/d*dt*.7}else if(d<=1.35&&Math.random()<dt*.3){playerHP=Math.max(0,playerHP-2);updateUI();if(playerHP===0){player.position.set(0,0,0);playerHP=100;toast('หมดสติ! กลับจุดเริ่มต้นและฟื้นเลือด');updateUI()}}}
+ const target=new THREE.Vector3(player.position.x,1,player.position.z);const desired=new THREE.Vector3(player.position.x+8,7,player.position.z+10);camera.position.lerp(desired,.09);camera.lookAt(target);
+ renderer.render(scene,camera)}
+buildWorld();resize();animate();
+</script>
+</body></html>
